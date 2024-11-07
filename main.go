@@ -10,7 +10,7 @@ import (
 func main() {
   log.Println("Starting RemoteConfigServer...")
 
-	http.HandleFunc("/template-config", templateConfigHandler)
+	http.HandleFunc("/template.json", templateConfigHandler)
 	http.Handle("/static/", http.StripPrefix("/static/impress-template", http.FileServer(http.Dir("./web/static/impress_template/"))))
 
   if err := http.ListenAndServe(":8080", nil); err != nil {
@@ -43,6 +43,7 @@ func getTemplateConfigJSON(kind string, server string, templates []uriJSONObj) (
 }
 
 func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
+  log.Println("Recieved template.json request");
   const uriFormat = "http://localhost:8080/static/impress-template/template%d.otp";
   const kind = "templateconfiguration"
   const server = "remoteserver"
