@@ -20,7 +20,7 @@ func main() {
 
 type uriJSONObj struct {
 	Uri   string `json:"uri"`
-	// Stamp string `json:"stamp"`
+	Stamp string `json:"stamp"`
 }
 
 type remoteTemplateJSON struct {
@@ -51,6 +51,7 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
   for i := 0; i < 3; i++ {
     uriObj := &uriJSONObj{
       Uri: fmt.Sprintf(uriFormat, i+1),
+      Stamp: fmt.Sprintf("%d", i+1),
     }
     uriObjArr[i] = *uriObj
   }
