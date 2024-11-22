@@ -10,8 +10,9 @@ import (
 func main() {
   log.Println("Starting RemoteConfigServer...")
 
-	http.HandleFunc("/template.json", templateConfigHandler)
-	http.Handle("/static/", http.StripPrefix("/static/impress-template", http.FileServer(http.Dir("./web/static/impress_template/"))))
+	http.HandleFunc("/asset.json", templateConfigHandler)
+  http.HandleFunc("/font.json", fontConfigHandler)
+	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./web/static/"))))
 
   if err := http.ListenAndServe(":8080", nil); err != nil {
     log.Print("Failed to start RemoteConfigServer")
@@ -27,13 +28,15 @@ type remoteTemplateJSON struct {
 	Kind      string     `json:"kind"`
 	Server    string     `json:"server"`
 	Templates []uriJSONObj `json:"templates"`
+  Fonts     []uriJSONObj `json:"fonts"`
 }
 
-func getTemplateConfigJSON(kind string, server string, templates []uriJSONObj) ([]byte, error) {
+func getAssetConfigJSON(kind string, server string, templates, fonts []uriJSONObj) ([]byte, error) {
 	data := &remoteTemplateJSON{
 		Kind:      kind,
 		Server:    server,
 		Templates: templates,
+    Fonts: fonts,
 	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -42,20 +45,45 @@ func getTemplateConfigJSON(kind string, server string, templates []uriJSONObj) (
 	return jsonData, nil
 }
 
+func getFontConfigJSON(kind string, server string, fonts []uriJSONObj) ([]byte, error) {
+	data := &remoteTemplateJSON{
+		Kind:      kind,
+		Server:    server,
+    Fonts: fonts,
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return jsonData, err
+	}
+	return jsonData, nil
+}
+
+
 func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
-  log.Println("Recieved template.json request");
-  const uriFormat = "http://localhost:8080/static/impress-template/template%d.otp";
-  const kind = "templateconfiguration"
+  log.Println("Recieved asset.json request");
+  const templateUriFormat = "http://localhost:8080/static/impress-template/template%d.otp";
+  const fontUriFormat = "http://localhost:8080/static/font/font%d.ttf";
+  const kind = "assetconfiguration"
   const server = "remoteserver"
-  uriObjArr := make([]uriJSONObj, 3)
+  templatesArr := make([]uriJSONObj, 3)
   for i := 0; i < 3; i++ {
     uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(uriFormat, i+1),
+      Uri: fmt.Sprintf(templateUriFormat, i+1),
       Stamp: fmt.Sprintf("%d", i+1),
     }
-    uriObjArr[i] = *uriObj
+    templatesArr[i] = *uriObj
   }
-  templateJSON, err := getTemplateConfigJSON("templateconfiguration", server, uriObjArr)
+
+  fontArr := make([]uriJSONObj, 3)
+  for i := 0; i < 3; i++ {
+    uriObj := &uriJSONObj{
+      Uri: fmt.Sprintf(fontUriFormat, i+1),
+      Stamp: fmt.Sprintf("%d", i+1),
+    }
+    fontArr[i] = *uriObj
+  }
+
+  templateJSON, err := getAssetConfigJSON(kind, server, templatesArr, fontArr)
   if err != nil {
     log.Printf("Failed to parse template config JSON with err[%s]", err.Error())
     w.WriteHeader(http.StatusInternalServerError)
@@ -64,6 +92,37 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(templateJSON)
+  if err != nil {
+    log.Printf("Failed to write json with error[%s]", err.Error())
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+}
+
+func fontConfigHandler(w http.ResponseWriter, r *http.Request) {
+  log.Println("Recieved font.json request");
+  const fontUriFormat = "http://localhost:8080/static/font/font%d.ttf";
+  const kind = "fontconfiguration"
+  const server = "remoteserver"
+
+  fontArr := make([]uriJSONObj, 3)
+  for i := 0; i < 3; i++ {
+    uriObj := &uriJSONObj{
+      Uri: fmt.Sprintf(fontUriFormat, i+1),
+      Stamp: fmt.Sprintf("%d", i+1),
+    }
+    fontArr[i] = *uriObj
+  }
+
+  fontJSON, err := getFontConfigJSON(kind, server, fontArr)
+  if err != nil {
+    log.Printf("Failed to parse font config JSON with err[%s]", err.Error())
+    w.WriteHeader(http.StatusInternalServerError)
+    return
+  }
+
+	w.Header().Set("Content-Type", "application/json")
+	_, err = w.Write(fontJSON)
   if err != nil {
     log.Printf("Failed to write json with error[%s]", err.Error())
     w.WriteHeader(http.StatusInternalServerError)
