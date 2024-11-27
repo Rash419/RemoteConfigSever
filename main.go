@@ -27,17 +27,18 @@ type uriJSONObj struct {
 type remoteTemplateJSON struct {
 	Kind      string     `json:"kind"`
 	Server    string     `json:"server"`
-	Templates []uriJSONObj `json:"templates"`
+	Templates map[string][]uriJSONObj `json:"templates"`
   Fonts     []uriJSONObj `json:"fonts"`
 }
 
-func getAssetConfigJSON(kind string, server string, templates, fonts []uriJSONObj) ([]byte, error) {
+func getAssetConfigJSON(kind string, server string, templates map[string][]uriJSONObj, fonts []uriJSONObj) ([]byte, error) {
 	data := &remoteTemplateJSON{
 		Kind:      kind,
 		Server:    server,
 		Templates: templates,
     Fonts: fonts,
 	}
+
 	jsonData, err := json.Marshal(data)
 	if err != nil {
 		return jsonData, err
@@ -65,13 +66,16 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
   const fontUriFormat = "http://localhost:8080/static/font/font%d.ttf";
   const kind = "assetconfiguration"
   const server = "remoteserver"
-  templatesArr := make([]uriJSONObj, 3)
+
+  templateMap := make(map[string][]uriJSONObj);
+
+  presntTemplates := make([]uriJSONObj, 3)
   for i := 0; i < 3; i++ {
     uriObj := &uriJSONObj{
       Uri: fmt.Sprintf(templateUriFormat, i+1),
       Stamp: fmt.Sprintf("%d", i+1),
     }
-    templatesArr[i] = *uriObj
+    presntTemplates[i] = *uriObj
   }
 
   fontArr := make([]uriJSONObj, 3)
@@ -83,7 +87,9 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
     fontArr[i] = *uriObj
   }
 
-  templateJSON, err := getAssetConfigJSON(kind, server, templatesArr, fontArr)
+  templateMap["presnt"] = presntTemplates;
+
+  templateJSON, err := getAssetConfigJSON(kind, server, templateMap, fontArr)
   if err != nil {
     log.Printf("Failed to parse template config JSON with err[%s]", err.Error())
     w.WriteHeader(http.StatusInternalServerError)
