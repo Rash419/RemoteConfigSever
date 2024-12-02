@@ -23,7 +23,7 @@ func main() {
 
 type uriJSONObj struct {
 	Uri   string `json:"uri"`
-	Stamp string `json:"stamp"`
+	Stamp string `json:"version"`
 }
 
 type remoteTemplateJSON struct {
