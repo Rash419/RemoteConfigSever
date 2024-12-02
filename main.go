@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
+	"path/filepath"
 )
 
 func main() {
@@ -59,35 +61,70 @@ func getFontConfigJSON(kind string, server string, fonts []uriJSONObj) ([]byte, 
 	return jsonData, nil
 }
 
+func getStaticFileName(kind string) ([]string, error) {
+  pathToStatic := "./web/static/";
+  filePaths := make([]string,0)
+
+  switch kind {
+  case "impress-template":
+    pathToStatic += "impress-template"
+  case "font":
+    pathToStatic += "font"
+  default:
+    return filePaths, nil;
+  }
+
+  err := filepath.Walk(pathToStatic, func(path string, info os.FileInfo, err error) error {
+    if err != nil {
+      return err;
+    }
+
+    if !info.IsDir() {
+        filePaths = append(filePaths, info.Name())
+    }
+    return nil
+  })
+
+  return filePaths, err;
+}
 
 func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
-  log.Println("Recieved asset.json request");
-  const templateUriFormat = "http://localhost:8080/static/impress-template/template%d.otp";
-  const fontUriFormat = "http://localhost:8080/static/font/font%d.ttf";
-  const kind = "assetconfiguration"
-  const server = "remoteserver"
+	log.Println("Recieved asset.json request")
+	const uriFormat = "http://localhost:8080/static/%s/%s"
+	const kind = "assetconfiguration"
+	const server = "remoteserver"
 
-  templateMap := make(map[string][]uriJSONObj);
+	templateFileNames, err := getStaticFileName("impress-template")
+	if err != nil {
+		log.Printf("Failed to get template static files with error[%s]", err.Error())
+	}
 
-  presntTemplates := make([]uriJSONObj, 3)
-  for i := 0; i < 3; i++ {
-    uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(templateUriFormat, i+1),
-      Stamp: fmt.Sprintf("%d", i+1),
-    }
-    presntTemplates[i] = *uriObj
+	templateMap := make(map[string][]uriJSONObj)
+
+	presntTemplates := make([]uriJSONObj, 0)
+	for i := 0; i < len(templateFileNames); i++ {
+		uriObj := &uriJSONObj{
+			Uri:   fmt.Sprintf(uriFormat, "impress-template", templateFileNames[i]),
+			Stamp: fmt.Sprintf("%d", i+1),
+		}
+		presntTemplates = append(presntTemplates, *uriObj)
+	}
+
+  fontFileNames , err := getStaticFileName("font")
+  if err != nil {
+		log.Printf("Failed to get font static files with error[%s]", err.Error())
   }
 
-  fontArr := make([]uriJSONObj, 3)
-  for i := 0; i < 3; i++ {
+  fontArr := make([]uriJSONObj, 0)
+  for i := 0; i < len(fontFileNames); i++ {
     uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(fontUriFormat, i+1),
+      Uri: fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
       Stamp: fmt.Sprintf("%d", i+1),
     }
-    fontArr[i] = *uriObj
+    fontArr = append(fontArr, *uriObj);
   }
 
-  templateMap["presnt"] = presntTemplates;
+  templateMap["presentation"] = presntTemplates;
 
   templateJSON, err := getAssetConfigJSON(kind, server, templateMap, fontArr)
   if err != nil {
@@ -107,17 +144,23 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 
 func fontConfigHandler(w http.ResponseWriter, r *http.Request) {
   log.Println("Recieved font.json request");
-  const fontUriFormat = "http://localhost:8080/static/font/font%d.ttf";
+
+	const uriFormat = "http://localhost:8080/static/%s/%s"
   const kind = "fontconfiguration"
   const server = "remoteserver"
 
-  fontArr := make([]uriJSONObj, 3)
-  for i := 0; i < 3; i++ {
+  fontFileNames , err := getStaticFileName("font")
+  if err != nil {
+		log.Printf("Failed to get font static files with error[%s]", err.Error())
+  }
+
+  fontArr := make([]uriJSONObj, 0)
+  for i := 0; i < len(fontFileNames); i++ {
     uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(fontUriFormat, i+1),
+      Uri: fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
       Stamp: fmt.Sprintf("%d", i+1),
     }
-    fontArr[i] = *uriObj
+    fontArr = append(fontArr, *uriObj);
   }
 
   fontJSON, err := getFontConfigJSON(kind, server, fontArr)
