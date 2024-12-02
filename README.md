@@ -9,33 +9,33 @@
   "kind": "assetconfiguration",
   "server": "remoteserver",
   "templates": {
-    "presnt": [
+    "presentation": [
       {
         "uri": "http://localhost:8080/static/impress-template/template1.otp",
-        "stamp": "1"
+        "version": "1"
       },
       {
         "uri": "http://localhost:8080/static/impress-template/template2.otp",
-        "stamp": "2"
+        "version": "2"
       },
       {
         "uri": "http://localhost:8080/static/impress-template/template3.otp",
-        "stamp": "3"
+        "version": "3"
       }
     ]
   },
   "fonts": [
     {
       "uri": "http://localhost:8080/static/font/font1.ttf",
-      "stamp": "1"
+      "version": "1"
     },
     {
       "uri": "http://localhost:8080/static/font/font2.ttf",
-      "stamp": "2"
+      "version": "2"
     },
     {
       "uri": "http://localhost:8080/static/font/font3.ttf",
-      "stamp": "3"
+      "version": "3"
     }
   ]
 }
