@@ -19,8 +19,12 @@ func main() {
 	log.Printf("Starting RemoteConfigServer on port %d...", *port)
 
 	portStr := ":" + strconv.Itoa(*port)
-	http.HandleFunc("/asset.json", templateConfigHandler)
-	http.HandleFunc("/font.json", fontConfigHandler)
+	http.HandleFunc("/asset.json", func(w http.ResponseWriter, r *http.Request) {
+		templateConfigHandler(w, r, portStr)
+	})
+	http.HandleFunc("/font.json", func(w http.ResponseWriter, r *http.Request) {
+		fontConfigHandler(w, r, portStr)
+	})
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./web/static/"))))
 	if err := http.ListenAndServe(portStr, nil); err != nil {
 		log.Print("Failed to start RemoteConfigServer")
@@ -94,9 +98,9 @@ func getStaticFileName(kind string) ([]string, error) {
 	return filePaths, err
 }
 
-func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
+func templateConfigHandler(w http.ResponseWriter, r *http.Request, portStr string) {
 	log.Println("Recieved asset.json request")
-	const uriFormat = "http://localhost:8080/static/%s/%s"
+	const uriFormat = "http://localhost%s/static/%s/%s"
 	const kind = "assetconfiguration"
 	const server = "remoteserver"
 
@@ -110,7 +114,7 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 	presntTemplates := make([]uriJSONObj, 0)
 	for i := 0; i < len(templateFileNames); i++ {
 		uriObj := &uriJSONObj{
-			Uri:   fmt.Sprintf(uriFormat, "impress-template", templateFileNames[i]),
+			Uri:   fmt.Sprintf(uriFormat, portStr, "impress-template", templateFileNames[i]),
 			Stamp: fmt.Sprintf("%d", i+1),
 		}
 		presntTemplates = append(presntTemplates, *uriObj)
@@ -124,7 +128,7 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 	fontArr := make([]uriJSONObj, 0)
 	for i := 0; i < len(fontFileNames); i++ {
 		uriObj := &uriJSONObj{
-			Uri:   fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
+			Uri:   fmt.Sprintf(uriFormat, portStr, "font", fontFileNames[i]),
 			Stamp: fmt.Sprintf("%d", i+1),
 		}
 		fontArr = append(fontArr, *uriObj)
@@ -148,10 +152,10 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func fontConfigHandler(w http.ResponseWriter, r *http.Request) {
+func fontConfigHandler(w http.ResponseWriter, r *http.Request, portStr string) {
 	log.Println("Recieved font.json request")
 
-	const uriFormat = "http://localhost:8080/static/%s/%s"
+	const uriFormat = "http://localhost%s/static/%s/%s"
 	const kind = "fontconfiguration"
 	const server = "remoteserver"
 
@@ -163,7 +167,7 @@ func fontConfigHandler(w http.ResponseWriter, r *http.Request) {
 	fontArr := make([]uriJSONObj, 0)
 	for i := 0; i < len(fontFileNames); i++ {
 		uriObj := &uriJSONObj{
-			Uri:   fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
+			Uri:   fmt.Sprintf(uriFormat, portStr, "font", fontFileNames[i]),
 			Stamp: fmt.Sprintf("%d", i+1),
 		}
 		fontArr = append(fontArr, *uriObj)
