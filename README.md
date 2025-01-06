@@ -48,3 +48,13 @@
       <url desc="URL of optional JSON file that lists fonts and impress template to be included in Online" type="string" default="">http://localhost:8080/asset.json</url>
     </remote_asset_config>
 ```
+
+## Running locally
+
+- You can run it locally using following command:
+
+```sh
+go run .
+```
+
+- It starts listening on "8080" by default but you can change it by passing `--port` flag. For example: `go run . --port=5000`

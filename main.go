@@ -2,23 +2,29 @@ package main
 
 import (
 	"encoding/json"
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 )
 
 func main() {
-  log.Println("Starting RemoteConfigServer...")
+	port := flag.Int("port", 8080, "port on which RemoteConfigServer listens")
 
+	flag.Parse()
+
+	log.Printf("Starting RemoteConfigServer on port %d...", *port)
+
+	portStr := ":" + strconv.Itoa(*port)
 	http.HandleFunc("/asset.json", templateConfigHandler)
-  http.HandleFunc("/font.json", fontConfigHandler)
+	http.HandleFunc("/font.json", fontConfigHandler)
 	http.Handle("/static/", http.StripPrefix("/static", http.FileServer(http.Dir("./web/static/"))))
-
-  if err := http.ListenAndServe(":8080", nil); err != nil {
-    log.Print("Failed to start RemoteConfigServer")
-  }
+	if err := http.ListenAndServe(portStr, nil); err != nil {
+		log.Print("Failed to start RemoteConfigServer")
+	}
 }
 
 type uriJSONObj struct {
@@ -27,10 +33,10 @@ type uriJSONObj struct {
 }
 
 type remoteTemplateJSON struct {
-	Kind      string     `json:"kind"`
-	Server    string     `json:"server"`
+	Kind      string                  `json:"kind"`
+	Server    string                  `json:"server"`
 	Templates map[string][]uriJSONObj `json:"templates"`
-  Fonts     []uriJSONObj `json:"fonts"`
+	Fonts     []uriJSONObj            `json:"fonts"`
 }
 
 func getAssetConfigJSON(kind string, server string, templates map[string][]uriJSONObj, fonts []uriJSONObj) ([]byte, error) {
@@ -38,7 +44,7 @@ func getAssetConfigJSON(kind string, server string, templates map[string][]uriJS
 		Kind:      kind,
 		Server:    server,
 		Templates: templates,
-    Fonts: fonts,
+		Fonts:     fonts,
 	}
 
 	jsonData, err := json.Marshal(data)
@@ -50,9 +56,9 @@ func getAssetConfigJSON(kind string, server string, templates map[string][]uriJS
 
 func getFontConfigJSON(kind string, server string, fonts []uriJSONObj) ([]byte, error) {
 	data := &remoteTemplateJSON{
-		Kind:      kind,
-		Server:    server,
-    Fonts: fonts,
+		Kind:   kind,
+		Server: server,
+		Fonts:  fonts,
 	}
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -62,30 +68,30 @@ func getFontConfigJSON(kind string, server string, fonts []uriJSONObj) ([]byte, 
 }
 
 func getStaticFileName(kind string) ([]string, error) {
-  pathToStatic := "./web/static/";
-  filePaths := make([]string,0)
+	pathToStatic := "./web/static/"
+	filePaths := make([]string, 0)
 
-  switch kind {
-  case "impress-template":
-    pathToStatic += "impress-template"
-  case "font":
-    pathToStatic += "font"
-  default:
-    return filePaths, nil;
-  }
+	switch kind {
+	case "impress-template":
+		pathToStatic += "impress-template"
+	case "font":
+		pathToStatic += "font"
+	default:
+		return filePaths, nil
+	}
 
-  err := filepath.Walk(pathToStatic, func(path string, info os.FileInfo, err error) error {
-    if err != nil {
-      return err;
-    }
+	err := filepath.Walk(pathToStatic, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
 
-    if !info.IsDir() {
-        filePaths = append(filePaths, info.Name())
-    }
-    return nil
-  })
+		if !info.IsDir() {
+			filePaths = append(filePaths, info.Name())
+		}
+		return nil
+	})
 
-  return filePaths, err;
+	return filePaths, err
 }
 
 func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
@@ -110,71 +116,71 @@ func templateConfigHandler(w http.ResponseWriter, r *http.Request) {
 		presntTemplates = append(presntTemplates, *uriObj)
 	}
 
-  fontFileNames , err := getStaticFileName("font")
-  if err != nil {
+	fontFileNames, err := getStaticFileName("font")
+	if err != nil {
 		log.Printf("Failed to get font static files with error[%s]", err.Error())
-  }
+	}
 
-  fontArr := make([]uriJSONObj, 0)
-  for i := 0; i < len(fontFileNames); i++ {
-    uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
-      Stamp: fmt.Sprintf("%d", i+1),
-    }
-    fontArr = append(fontArr, *uriObj);
-  }
+	fontArr := make([]uriJSONObj, 0)
+	for i := 0; i < len(fontFileNames); i++ {
+		uriObj := &uriJSONObj{
+			Uri:   fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
+			Stamp: fmt.Sprintf("%d", i+1),
+		}
+		fontArr = append(fontArr, *uriObj)
+	}
 
-  templateMap["presentation"] = presntTemplates;
+	templateMap["presentation"] = presntTemplates
 
-  templateJSON, err := getAssetConfigJSON(kind, server, templateMap, fontArr)
-  if err != nil {
-    log.Printf("Failed to parse template config JSON with err[%s]", err.Error())
-    w.WriteHeader(http.StatusInternalServerError)
-    return
-  }
+	templateJSON, err := getAssetConfigJSON(kind, server, templateMap, fontArr)
+	if err != nil {
+		log.Printf("Failed to parse template config JSON with err[%s]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(templateJSON)
-  if err != nil {
-    log.Printf("Failed to write json with error[%s]", err.Error())
-    w.WriteHeader(http.StatusInternalServerError)
-    return
-  }
+	if err != nil {
+		log.Printf("Failed to write json with error[%s]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
 
 func fontConfigHandler(w http.ResponseWriter, r *http.Request) {
-  log.Println("Recieved font.json request");
+	log.Println("Recieved font.json request")
 
 	const uriFormat = "http://localhost:8080/static/%s/%s"
-  const kind = "fontconfiguration"
-  const server = "remoteserver"
+	const kind = "fontconfiguration"
+	const server = "remoteserver"
 
-  fontFileNames , err := getStaticFileName("font")
-  if err != nil {
+	fontFileNames, err := getStaticFileName("font")
+	if err != nil {
 		log.Printf("Failed to get font static files with error[%s]", err.Error())
-  }
+	}
 
-  fontArr := make([]uriJSONObj, 0)
-  for i := 0; i < len(fontFileNames); i++ {
-    uriObj := &uriJSONObj{
-      Uri: fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
-      Stamp: fmt.Sprintf("%d", i+1),
-    }
-    fontArr = append(fontArr, *uriObj);
-  }
+	fontArr := make([]uriJSONObj, 0)
+	for i := 0; i < len(fontFileNames); i++ {
+		uriObj := &uriJSONObj{
+			Uri:   fmt.Sprintf(uriFormat, "font", fontFileNames[i]),
+			Stamp: fmt.Sprintf("%d", i+1),
+		}
+		fontArr = append(fontArr, *uriObj)
+	}
 
-  fontJSON, err := getFontConfigJSON(kind, server, fontArr)
-  if err != nil {
-    log.Printf("Failed to parse font config JSON with err[%s]", err.Error())
-    w.WriteHeader(http.StatusInternalServerError)
-    return
-  }
+	fontJSON, err := getFontConfigJSON(kind, server, fontArr)
+	if err != nil {
+		log.Printf("Failed to parse font config JSON with err[%s]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 	_, err = w.Write(fontJSON)
-  if err != nil {
-    log.Printf("Failed to write json with error[%s]", err.Error())
-    w.WriteHeader(http.StatusInternalServerError)
-    return
-  }
+	if err != nil {
+		log.Printf("Failed to write json with error[%s]", err.Error())
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 }
